@@ -39,7 +39,7 @@ npm start
 
 📮 API Endpoint
 
-POST /api/v1/ai/chat
+POST http://localhost:5000/api/v1/ai/chat
 
 Request
 {
