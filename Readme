@@ -1,17 +1,52 @@
-# AI Integration Service
+🤖 AI Integration Service
 
-AI Microservice for Smart Logistics System.
+AI Microservice for the Smart Logistics System
 
-## 🚀Features
+--------------------------------------
 
-- AI Chat
-- OpenRouter Integration
-- Prompt Engineering
-- REST API
-- Layered Architecture
+🚀 Features
 
-## Run
+✔ AI Chat
+✔ OpenRouter Integration
+✔ Prompt Engineering
+✔ REST API
+✔ Layered Architecture
+
+--------------------------------------
+
+📂 Project Structure
+
+src/
+├── config/
+├── controllers/
+├── routes/
+├── services/
+...
+
+--------------------------------------
+
+⚙ Installation
 
 npm install
 
+--------------------------------------
+
+▶ Run
+
 npm start
+
+--------------------------------------
+
+📮 API Endpoint
+
+POST /api/v1/ai/chat
+
+Request
+{
+  "question": "Which shipments are delayed?"
+}
+
+Response
+{
+   ...
+}
