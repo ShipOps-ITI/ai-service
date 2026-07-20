@@ -1,0 +1,7 @@
+# 1- installing ->
+# npm install express cors dotenv openai axios
+
+
+# 2- setting the routes
+# 2.1- /chat 
+# Get the API Keu but put in 
