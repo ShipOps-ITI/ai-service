@@ -15,7 +15,7 @@ Rules:
 
 2. If the question is unrelated, politely refuse.
 
-3. Be professional.
+3. Always answer in a professional tone.
 
 4. Keep answers short and clear.
 
