@@ -39,7 +39,7 @@ npm start
 
 📮 API Endpoint
 
-POST http://localhost:5000/api/v1/ai/chat
+POST http://localhost:5005/api/v1/ai/chat
 
 Request
 {
@@ -50,3 +50,12 @@ Response
 {
    ...
 }
+
+## Data flow
+
+1. The signed-in website sends the question and its bearer token to `POST /api/v1/ai/chat`.
+2. The AI service forwards that token to the shipment and core services and requests only read-only data.
+3. Each backend applies its existing role and company authorization before returning records.
+4. Only those authorized records are included as context for the model. The model never connects to a database directly.
+
+Configure `SHIPMENT_SERVICE_URL`, `CORE_SERVICE_URL`, and `FRONTEND_ORIGIN` in `.env` when your services are not using the local defaults.

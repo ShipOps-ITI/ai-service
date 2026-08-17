@@ -7,20 +7,19 @@ const client = require("../config/aiProvider"); // gab el client eli 3amlnah gwa
 // summarize()
 
 const systemPrompt = require("../prompts/systemPrompt");
-const shipments = require("../data/shipment");
-
-/////-> 
-const shipmentContext = JSON.stringify(shipments, null, 2);
+const { getDataContext } = require("./dataContext.service");
 
 
 
-const chat = async (question) => { // The 1st function called chat()
+const chat = async (question, accessToken) => { // The 1st function called chat()
+    const dataContext = await getDataContext(accessToken);
+    const serializedContext = JSON.stringify(dataContext);
 
     const response = await client.chat.completions.create({ // the most imp line that will communicate with GPT
 
         // model: "gpt-4.1-mini",   // The model name - fast and chea
         // model: "google/gemma-4-26b-a4b-it:free",
-        model: process.env.AIModel,
+        model: process.env.AI_MODEL || process.env.AIModel,
 
         messages: [
 
@@ -33,7 +32,7 @@ const chat = async (question) => { // The 1st function called chat()
             },
             {
                 role: "system",
-                content: `Current shipment data:\n${shipmentContext}`,
+                content: `Authorized data retrieved from ShipOps services for this request:\n${serializedContext}`,
             },
 
             {
@@ -48,7 +47,7 @@ const chat = async (question) => { // The 1st function called chat()
 
     });
 
-    return response.choices[0].message.content;
+    return response.choices[0]?.message?.content || "I could not generate an answer.";
 
 };
 
