@@ -1,56 +1,53 @@
-// services/: المكان الوحيد اللي بيتعامل مع OpenAI.
-const client = require("../config/aiProvider"); // gab el client eli 3amlnah gwa el config 
-
-//The main functions
-// chat()
-// generateReport()
-// summarize()
-
+const client = require("../config/aiProvider");
 const systemPrompt = require("../prompts/systemPrompt");
-const { getDataContext } = require("./dataContext.service");
+const { toolDefinitions, executeTool } = require("./shipopsTools.service");
 
+const getModel = () => process.env.AI_MODEL || process.env.AIModel;
+const getAnswer = (response) => response.choices?.[0]?.message;
 
+const chat = async (question, accessToken) => {
+  const model = getModel();
+  if (!model) throw new Error("AI_MODEL is not configured.");
 
-const chat = async (question, accessToken) => { // The 1st function called chat()
-    const dataContext = await getDataContext(accessToken);
-    const serializedContext = JSON.stringify(dataContext);
+  const messages = [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: question },
+  ];
 
-    const response = await client.chat.completions.create({ // the most imp line that will communicate with GPT
-
-        // model: "gpt-4.1-mini",   // The model name - fast and chea
-        // model: "google/gemma-4-26b-a4b-it:free",
-        model: process.env.AI_MODEL || process.env.AIModel,
-
-        messages: [
-
-            {
-
-                role: "system",
-
-                content: systemPrompt  // Read the system prompt from here in the beggining the answer the user's question
-
-            },
-            {
-                role: "system",
-                content: `Authorized data retrieved from ShipOps services for this request:\n${serializedContext}`,
-            },
-
-            {
-
-                role: "user",
-
-                content: question
-
-            }
-
-        ],
-
+  for (let step = 0; step < 3; step += 1) {
+    const response = await client.chat.completions.create({
+      model,
+      messages,
+      tools: toolDefinitions,
+      tool_choice: "auto",
     });
 
-    return response.choices[0]?.message?.content || "I could not generate an answer.";
+    const assistantMessage = getAnswer(response);
+    if (!assistantMessage) break;
+    if (assistantMessage.content && !assistantMessage.tool_calls?.length) {
+      return assistantMessage.content;
+    }
+    if (!assistantMessage.tool_calls?.length) break;
 
+    messages.push(assistantMessage);
+
+    for (const toolCall of assistantMessage.tool_calls) {
+      const result = await executeTool(
+        toolCall.function.name,
+        toolCall.function.arguments,
+        accessToken,
+      );
+
+      messages.push({
+        role: "tool",
+        tool_call_id: toolCall.id,
+        content: JSON.stringify(result),
+      });
+    }
+  }
+
+  console.warn("AI provider returned no final answer after tool processing.");
+  return "I could not generate an answer from the configured AI model.";
 };
 
-module.exports = {
-    chat,
-};
+module.exports = { chat };
