@@ -2,12 +2,39 @@ const client = require("../config/aiProvider");
 const systemPrompt = require("../prompts/systemPrompt");
 const { toolDefinitions, executeTool } = require("./shipopsTools.service");
 
-const getModel = () => process.env.AI_MODEL || process.env.AIModel;
+const getModels = () => [
+  process.env.AI_MODEL || process.env.AIModel,
+  ...(process.env.AI_FALLBACK_MODELS || "").split(","),
+].map((model) => model?.trim()).filter(Boolean);
 const getAnswer = (response) => response.choices?.[0]?.message;
+const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+const isRateLimitError = (error) => error?.status === 429 || error?.code === 429 || /rate.?limit|429/i.test(error?.message || "");
+
+const requestCompletion = async (models, request) => {
+  let lastError;
+
+  for (const model of models) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        return await client.chat.completions.create({ ...request, model });
+      } catch (error) {
+        lastError = error;
+        if (!isRateLimitError(error)) throw error;
+        if (attempt === 0) await wait(1000);
+      }
+    }
+  }
+
+  const error = new Error("The AI provider is temporarily rate-limited. Please try again shortly.");
+  error.status = 503;
+  error.cause = lastError;
+  throw error;
+};
 
 const chat = async (question, accessToken) => {
-  const model = getModel();
-  if (!model) throw new Error("AI_MODEL is not configured.");
+  const models = getModels();
+  if (!models.length) throw new Error("AI_MODEL is not configured.");
 
   const messages = [
     { role: "system", content: systemPrompt },
@@ -15,8 +42,7 @@ const chat = async (question, accessToken) => {
   ];
 
   for (let step = 0; step < 3; step += 1) {
-    const response = await client.chat.completions.create({
-      model,
+    const response = await requestCompletion(models, {
       messages,
       tools: toolDefinitions,
       tool_choice: "auto",
