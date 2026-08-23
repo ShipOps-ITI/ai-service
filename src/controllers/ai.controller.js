@@ -43,13 +43,15 @@ const chat = async (req, res) => {
 
     } catch (error) {
 
-        console.error(error);
+        console.error(`AI request failed: ${error.message}`);
 
         res.status(error.status || 500).json({
 
             success: false,
 
-            message: error.message,
+            message: error.status === 429
+                ? "The AI provider is temporarily rate-limited. Please try again shortly."
+                : error.message,
 
         });
 
