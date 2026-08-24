@@ -2,6 +2,7 @@ const axios = require("axios");
 
 const CORE_URL = () => process.env.CORE_SERVICE_URL || "http://localhost:5002/api/v1";
 const SHIPMENT_URL = () => process.env.SHIPMENT_SERVICE_URL || "http://localhost:5004/api/shipments";
+const AUTH_URL = () => process.env.AUTH_SERVICE_URL || "http://localhost:5001/auth";
 
 const toolDefinitions = [
   {
@@ -57,6 +58,14 @@ const toolDefinitions = [
     function: {
       name: "get_fleet_summary",
       description: "List the fleets the signed-in operations user is authorized to view.",
+      parameters: { type: "object", properties: {} },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_user_summary",
+      description: "Get the number of users the signed-in administrator is authorized to manage. Use for questions about users, team members, or user count in ShipOps.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -194,6 +203,21 @@ const getFleetSummary = async (accessToken) => {
   }));
 };
 
+const getUserSummary = async (accessToken) => {
+  const payload = await apiGet(`${AUTH_URL()}/users`, accessToken);
+  if (payload.error) return payload;
+
+  const users = dataArray(payload);
+  return {
+    totalUsers: users.length,
+    usersByRole: users.reduce((counts, user) => {
+      const role = user.role || "UNKNOWN";
+      counts[role] = (counts[role] || 0) + 1;
+      return counts;
+    }, {}),
+  };
+};
+
 const searchPorts = async (query, accessToken) => {
   const payload = await apiGet(`${CORE_URL()}/ports`, accessToken, { page: 1, limit: 10, search: query });
   if (payload.error) return payload;
@@ -216,6 +240,7 @@ const executeTool = async (name, argumentsJson, accessToken) => {
     case "get_tracking_summary": return getTrackingSummary(accessToken);
     case "get_ship_statistics": return getShipStatistics(accessToken);
     case "get_fleet_summary": return getFleetSummary(accessToken);
+    case "get_user_summary": return getUserSummary(accessToken);
     case "search_ports": return searchPorts(args.query, accessToken);
     default: return { error: "Unknown ShipOps tool." };
   }
